@@ -47,23 +47,18 @@
 
     <!-- Navigation Top Bar -->
     <div class="top-bar">
-      <div class="flex items-center gap-24" style="flex:1">
-        <div class="title" id="app-title" style="cursor:pointer" onclick="window.location.hash = '#/qsi-dashboard'">Phase 3</div>
-        <div class="tab-row">
-          <button class="tab" id="tab-activities" onclick="window.location.hash = '#/activities'" style="display:none">
-            <span class="material-icons-round">view_list</span>
-            <span>Activities</span>
-          </button>
-          <button class="tab active" id="tab-qsi">
-            <span class="material-icons-round">analytics</span>
-            <span>QSi Dashboard</span>
-          </button>
-        </div>
+      <div class="flex items-center gap-8" style="flex:1; min-width:0">
+        <button class="icon-btn hidden" id="btn-app-back" style="margin-right:4px">
+          <span class="material-icons-round">arrow_back</span>
+        </button>
+        <div class="title truncate" id="app-title" style="cursor:pointer; font-weight:800; color:var(--md-primary)" onclick="window.location.hash = '#/qsi-dashboard'">Phase 3 QSI</div>
       </div>
-      <div class="actions">
-        <button class="btn btn-outlined" id="btn-config-dialog">
+      <div class="actions flex items-center gap-8">
+        <button class="icon-btn" id="btn-app-sync" title="Sync Telegram Report" style="display:none">
+          <span class="material-icons-round">sync</span>
+        </button>
+        <button class="icon-btn" id="btn-app-config" title="Period & Telegram Settings">
           <span class="material-icons-round">settings</span>
-          <span>Reporting Config</span>
         </button>
       </div>
     </div>

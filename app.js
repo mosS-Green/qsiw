@@ -104,14 +104,20 @@ function formatDateForAPI(d) {
   return `${yyyy}-${mm}-${dd}`;
 }
 
+// ── CORS proxy fetch helper for file:/// and client-side runs ──
+function proxiedFetch(url, options = {}) {
+  const proxiedUrl = `https://corsproxy.io/?` + encodeURIComponent(url);
+  return fetch(proxiedUrl, options);
+}
+
 // ── Fetch PM Q-hour API Data ──────────────────────────────────
 async function fetchPMQHourData(fromDate, toDate) {
   const from = formatDateForAPI(fromDate);
   const to = formatDateForAPI(toDate);
   try {
     const [visitRes, wirRes] = await Promise.all([
-      fetch(`${PM_QHOUR_API_BASE}/PMCHourVisitData?fromDate=${from}&toDate=${to}&RegionId=${PM_QHOUR_REGION_ID}&ProjectId=${PM_QHOUR_PROJECT_ID}&userId=${PM_QHOUR_USER_ID}`),
-      fetch(`${PM_QHOUR_API_BASE}/WirApprovedDashborad?fromDate=${from}&toDate=${to}&RegionId=${PM_QHOUR_REGION_ID}&ProjectId=${PM_QHOUR_PROJECT_ID}&userId=${PM_QHOUR_USER_ID}`)
+      proxiedFetch(`${PM_QHOUR_API_BASE}/PMCHourVisitData?fromDate=${from}&toDate=${to}&RegionId=${PM_QHOUR_REGION_ID}&ProjectId=${PM_QHOUR_PROJECT_ID}&userId=${PM_QHOUR_USER_ID}`),
+      proxiedFetch(`${PM_QHOUR_API_BASE}/WirApprovedDashborad?fromDate=${from}&toDate=${to}&RegionId=${PM_QHOUR_REGION_ID}&ProjectId=${PM_QHOUR_PROJECT_ID}&userId=${PM_QHOUR_USER_ID}`)
     ]);
     const visitJson = await visitRes.json();
     const wirJson = await wirRes.json();
@@ -138,7 +144,7 @@ async function loadFileFromTelegram() {
 
   try {
     // 1. Get Chat details to retrieve the latest pinned message ID
-    const chatRes = await fetch(`https://api.telegram.org/bot${token}/getChat?chat_id=${chatId}`);
+    const chatRes = await proxiedFetch(`https://api.telegram.org/bot${token}/getChat?chat_id=${chatId}`);
     const chatData = await chatRes.json();
 
     if (!chatData.ok) {
@@ -159,7 +165,7 @@ async function loadFileFromTelegram() {
     const fileName = documentInfo.file_name;
 
     // 2. Call getFile to retrieve the downloadable path
-    const fileRes = await fetch(`https://api.telegram.org/bot${token}/getFile?file_id=${fileId}`);
+    const fileRes = await proxiedFetch(`https://api.telegram.org/bot${token}/getFile?file_id=${fileId}`);
     const fileData = await fileRes.json();
 
     if (!fileData.ok) {
@@ -169,7 +175,7 @@ async function loadFileFromTelegram() {
     const filePath = fileData.result.file_path;
 
     // 3. Fetch the actual file contents (Excel / JSON)
-    const downloadRes = await fetch(`https://api.telegram.org/file/bot${token}/${filePath}`);
+    const downloadRes = await proxiedFetch(`https://api.telegram.org/file/bot${token}/${filePath}`);
     const arrayBuffer = await downloadRes.arrayBuffer();
 
     // 4. Parse using SheetJS or JSON
@@ -803,13 +809,37 @@ function fallbackDownload(blob, nameHint) {
 function renderActiveScreen() {
   const hash = window.location.hash || '#/qsi-dashboard';
   const container = document.getElementById('screen-container');
+  const btnBack = document.getElementById('btn-app-back');
+  const btnSync = document.getElementById('btn-app-sync');
+  const titleEl = document.getElementById('app-title');
 
   if (!container) return;
 
   if (hash.startsWith('#/qsi-detail/')) {
     const type = hash.replace('#/qsi-detail/', '');
+    
+    // Show back button, hide sync button
+    if (btnBack) btnBack.classList.remove('hidden');
+    if (btnSync) btnSync.style.display = 'none';
+    
+    // Update Title dynamically
+    if (titleEl) {
+      if (type === 'compliance') titleEl.textContent = 'Compliance Details';
+      else if (type === 'open-ncs') titleEl.textContent = 'Open NC Details';
+      else titleEl.textContent = 'Discipline Details';
+    }
+
     renderDetailScreen(container, type);
   } else {
+    // Hide back button, show sync button if data is loaded
+    if (btnBack) btnBack.classList.add('hidden');
+    if (btnSync) {
+      btnSync.style.display = window.qsiSession.data ? 'inline-flex' : 'none';
+    }
+    
+    // Update Title to default
+    if (titleEl) titleEl.textContent = 'Phase 3 QSI';
+
     renderDashboardScreen(container);
   }
 }
@@ -1582,9 +1612,10 @@ function renderDetailScreen(container, detailType) {
 }
 
 // ── NC Details Modal Popup window ──────────────────────────────
+// ── NC Details slide-up Bottom Sheet for Android ─────────────────
 function showNCDetailWindow(nc) {
   const overlay = document.createElement('div');
-  overlay.className = 'nc-detail-overlay';
+  overlay.className = 'bottom-sheet-overlay';
 
   const status = (nc["Status"] || "Unknown").toString().trim();
   const statusLower = status.toLowerCase();
@@ -1637,25 +1668,26 @@ function showNCDetailWindow(nc) {
   ].filter(p => p.url);
 
   overlay.innerHTML = `
-    <div class="nc-detail-window">
-      <div class="nc-detail-header">
-        <div class="flex items-center gap-12">
-          <span class="material-icons-round" style="color:var(--md-primary); font-size:28px">description</span>
-          <div>
-            <div class="title-large" style="font-weight:800">NC #${nc["NC ID"] || nc["Sr No."] || 'N/A'}</div>
-            <div class="flex items-center gap-8" style="margin-top:4px">
+    <div class="bottom-sheet animate-slide-up">
+      <div class="bottom-sheet-handle"></div>
+      <div class="bottom-sheet-header">
+        <div class="flex items-center gap-12" style="min-width:0; flex:1">
+          <span class="material-icons-round" style="color:var(--md-primary); font-size:24px">description</span>
+          <div style="min-width:0; flex:1">
+            <div class="title-large truncate" style="font-weight:800">NC #${nc["NC ID"] || nc["Sr No."] || 'N/A'}</div>
+            <div class="flex items-center gap-8 flex-wrap" style="margin-top:4px">
               <span class="nc-status-badge ${statusClass}">${status}</span>
               <span class="label-medium" style="font-weight:700; color:${severityColor}">${severity}</span>
               <span class="label-medium" style="color:var(--md-on-surface-variant)">${age} days</span>
             </div>
           </div>
         </div>
-        <button class="icon-btn" id="btn-nc-close" style="width:36px; height:36px">
+        <button class="icon-btn" id="btn-nc-close" style="width:36px; height:36px; margin-left:8px">
           <span class="material-icons-round" style="font-size:22px">close</span>
         </button>
       </div>
 
-      <div class="nc-detail-body">
+      <div class="bottom-sheet-body">
         <!-- Identity -->
         <div class="nc-detail-group">
           <div class="nc-detail-group-title">Identity</div>
@@ -1705,13 +1737,13 @@ function showNCDetailWindow(nc) {
 
         <!-- Photos & Links -->
         ${photos.length > 0 ? `
-          <div class="nc-detail-group">
+          <div class="nc-detail-group" style="padding-bottom:16px">
             <div class="nc-detail-group-title">Photos & Hyperlinks</div>
             <div style="display:flex; flex-direction:column; gap:8px">
               ${photos.map(p => `
                 <div class="flex items-center gap-8">
                   <span class="material-icons-round" style="color:var(--md-primary); font-size:18px">link</span>
-                  <a href="${p.url}" target="_blank" style="font-weight:600; font-size:0.9rem">${p.label} (Click to open)</a>
+                  <a href="${p.url}" target="_blank" style="font-weight:600; font-size:0.9rem">${p.label}</a>
                 </div>
               `).join('')}
             </div>
@@ -1858,9 +1890,33 @@ function showTelegramConfigOverlay() {
 // ── Application Initialization ───────────────────────────────
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Bind general click triggers
-  const configBtn = document.getElementById('btn-config-dialog');
-  if (configBtn) configBtn.onclick = showConfigDialog;
+  // Bind top app bar responsive buttons
+  const backBtn = document.getElementById('btn-app-back');
+  const syncBtn = document.getElementById('btn-app-sync');
+  const configBtn = document.getElementById('btn-app-config');
+
+  if (backBtn) {
+    backBtn.onclick = () => {
+      window.location.hash = '#/qsi-dashboard';
+    };
+  }
+
+  if (syncBtn) {
+    syncBtn.onclick = () => {
+      const icon = syncBtn.querySelector('.material-icons-round');
+      if (icon) icon.style.animation = 'spin 1s linear infinite';
+      syncBtn.disabled = true;
+
+      loadFileFromTelegram().finally(() => {
+        if (icon) icon.style.animation = '';
+        syncBtn.disabled = false;
+      });
+    };
+  }
+
+  if (configBtn) {
+    configBtn.onclick = showConfigDialog;
+  }
 
   // Hide initial loading screen
   const loader = document.getElementById('initial-loading');

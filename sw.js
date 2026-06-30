@@ -42,7 +42,7 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
   // 1. Dynamic API calls: Bypass cache (Network Only / Network First)
-  if (url.hostname === 'api.telegram.org' || url.hostname === 'quality.godrejproperties.com') {
+  if (url.hostname === 'api.telegram.org' || url.hostname === 'quality.godrejproperties.com' || url.hostname === 'corsproxy.io') {
     event.respondWith(
       fetch(event.request)
         .catch(() => {
