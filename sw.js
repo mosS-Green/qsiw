@@ -1,4 +1,4 @@
-const CACHE_NAME = 'qsi-dashboard-cache-v1';
+const CACHE_NAME = 'qsi-dashboard-cache-v2';
 
 const STATIC_ASSETS = [
   './',
@@ -13,7 +13,7 @@ const STATIC_ASSETS = [
   'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js'
 ];
 
-// Install: Cache static resources
+// Install: Cache static resources and immediately activate
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -22,7 +22,7 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// Activate: Clean old caches
+// Activate: Clean ALL old caches
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
@@ -41,15 +41,11 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // 1. Dynamic API calls: Bypass cache (Network Only / Network First)
+  // 1. Dynamic API calls: Network Only (never cache)
   if (url.hostname === 'api.telegram.org' || url.hostname === 'quality.godrejproperties.com' || url.hostname === 'corsproxy.io') {
     event.respondWith(
       fetch(event.request)
         .catch(() => {
-          // If network fails for PMCheck API, see if we have a cached version
-          if (url.pathname.includes('/PMCheck/')) {
-            return caches.match(event.request);
-          }
           return new Response(JSON.stringify({ ok: false, error: 'Network unavailable' }), {
             headers: { 'Content-Type': 'application/json' }
           });
@@ -58,30 +54,29 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 2. Static Assets & Third-party Libraries: Cache First
+  // 2. App shell & assets: Network First, fall back to cache
+  //    This ensures code updates from GitHub Pages are always picked up.
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-
-      return fetch(event.request).then((networkResponse) => {
-        if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
-          return networkResponse;
+    fetch(event.request)
+      .then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200) {
+          const responseToCache = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseToCache);
+          });
         }
-
-        const responseToCache = networkResponse.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, responseToCache);
-        });
-
         return networkResponse;
-      }).catch(() => {
-        // Fallback for document navigation
-        if (event.request.mode === 'navigate') {
-          return caches.match('./index.html');
-        }
-      });
-    })
+      })
+      .catch(() => {
+        return caches.match(event.request).then((cachedResponse) => {
+          if (cachedResponse) {
+            return cachedResponse;
+          }
+          // Fallback for document navigation
+          if (event.request.mode === 'navigate') {
+            return caches.match('./index.html');
+          }
+        });
+      })
   );
 });

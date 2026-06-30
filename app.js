@@ -134,10 +134,11 @@ async function fetchPMQHourData(fromDate, toDate) {
 
 // ── Fetch Pinned Report File from Telegram Bot API ─────────────
 async function loadFileFromTelegram() {
-  const token = window.qsiSession.tgBotToken.trim();
-  const chatId = window.qsiSession.tgChatId.trim();
+  const token = (window.qsiSession.tgBotToken || '').trim();
+  const chatId = (window.qsiSession.tgChatId || '').trim();
 
   if (!token || !chatId) {
+    showSnackbar('Please configure Telegram credentials first.', 3000);
     showTelegramConfigOverlay();
     return;
   }
