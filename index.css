@@ -458,6 +458,9 @@ a {
   gap: 10px;
 }
 
+/* Global hidden utility — used everywhere by JS */
+.hidden { display: none !important; }
+
 .snackbar.hidden { display: none !important; }
 
 /* ── Detail view - Masonry & Tree ───────────────────────────── */
