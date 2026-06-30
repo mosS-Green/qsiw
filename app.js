@@ -55,8 +55,10 @@ function updateOnlineStatus() {
   if (offlineBanner) {
     if (navigator.onLine) {
       offlineBanner.classList.add('hidden');
+      offlineBanner.style.setProperty('display', 'none', 'important');
     } else {
       offlineBanner.classList.remove('hidden');
+      offlineBanner.style.setProperty('display', 'flex', 'important');
     }
   }
 }
@@ -846,27 +848,76 @@ function renderActiveScreen() {
 
 // 1. Dashboard Main View Screen
 function renderDashboardScreen(container) {
+  const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  const currentYear = new Date().getFullYear();
+  const years = [currentYear - 2, currentYear - 1, currentYear, currentYear + 1];
+
   if (!window.qsiSession.data) {
     container.innerHTML = `
-      <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:60vh; text-align:center; padding:32px">
-        <div class="card-elevated" style="max-width:500px; padding:40px; display:flex; flex-direction:column; align-items:center; gap:20px">
-          <span class="material-icons-round" style="font-size:72px; color:var(--md-primary)">analytics</span>
-          <h2 class="headline-small" style="font-weight:600">QSi Dashboard</h2>
-          <p class="body-medium" style="color:var(--md-on-surface-variant)">Select a month and import a quality NC report spreadsheet (Excel or JSON) to view key Quality Status Indicators.</p>
-          
-          <div class="flex-col gap-12 w-full">
-            <button class="btn btn-filled w-full" id="btn-load-local-file">
-              <span class="material-icons-round">upload_file</span>
-              <span>Load Local File</span>
-            </button>
-            <button class="btn btn-outlined w-full" id="btn-load-tg-file">
+      <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:80vh; padding:16px">
+        <div class="card-elevated" style="width:100%; max-width:440px; padding:32px; display:flex; flex-direction:column; gap:24px">
+          <div style="text-align:center; display:flex; flex-direction:column; align-items:center; gap:8px">
+            <div style="width:64px; height:64px; border-radius:16px; background:var(--md-primary-container); display:flex; align-items:center; justify-content:center">
+              <span class="material-icons-round" style="font-size:36px; color:var(--md-primary)">analytics</span>
+            </div>
+            <h2 class="headline-small" style="font-weight:800; color:var(--md-primary); margin-top:8px">QSI Dashboard</h2>
+            <p class="body-medium" style="color:var(--md-on-surface-variant)">Select reporting period and load report</p>
+          </div>
+
+          <!-- Period Selectors -->
+          <div class="flex gap-12">
+            <div class="form-group" style="flex:1.5">
+              <label for="sel-month">Month</label>
+              <select id="sel-month" style="width:100%; height:44px; padding:0 12px; border-radius:var(--radius-sm); border:1px solid var(--md-outline); background:var(--md-surface); font-size:0.95rem; font-weight:600">
+                ${months.map((m, idx) => `<option value="${idx}" ${idx === window.qsiSession.selectedMonth ? 'selected' : ''}>${m}</option>`).join('')}
+              </select>
+            </div>
+            <div class="form-group" style="flex:1">
+              <label for="sel-year">Year</label>
+              <select id="sel-year" style="width:100%; height:44px; padding:0 12px; border-radius:var(--radius-sm); border:1px solid var(--md-outline); background:var(--md-surface); font-size:0.95rem; font-weight:600">
+                ${years.map(y => `<option value="${y}" ${y === window.qsiSession.selectedYear ? 'selected' : ''}>${y}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+
+          <div style="height:1px; background:var(--md-outline-variant)"></div>
+
+          <!-- Actions -->
+          <div class="flex-col gap-12">
+            <button class="btn btn-filled w-full" id="btn-load-tg-file" style="height:48px">
               <span class="material-icons-round">telegram</span>
-              <span>Load Pinned File via Telegram</span>
+              <span>Load via Telegram Bot</span>
+            </button>
+            
+            <button class="btn btn-outlined w-full" id="btn-load-local-file" style="height:48px">
+              <span class="material-icons-round">upload_file</span>
+              <span>Load Local Excel/JSON</span>
+            </button>
+          </div>
+
+          <div style="text-align:center; margin-top:8px">
+            <button class="btn-text" id="btn-edit-tg-creds" style="font-size:0.9rem; font-weight:700">
+              <span class="material-icons-round" style="font-size:18px; vertical-align:middle; margin-right:4px">vpn_key</span>
+              <span>Edit Telegram Credentials</span>
             </button>
           </div>
         </div>
       </div>
     `;
+
+    // Sync input selectors to session state
+    const selMonth = container.querySelector('#sel-month');
+    const selYear = container.querySelector('#sel-year');
+    if (selMonth) {
+      selMonth.addEventListener('change', e => {
+        window.qsiSession.selectedMonth = parseInt(e.target.value, 10);
+      });
+    }
+    if (selYear) {
+      selYear.addEventListener('change', e => {
+        window.qsiSession.selectedYear = parseInt(e.target.value, 10);
+      });
+    }
 
     // Local file loader fallback
     container.querySelector('#btn-load-local-file').addEventListener('click', () => {
@@ -908,6 +959,7 @@ function renderDashboardScreen(container) {
     });
 
     container.querySelector('#btn-load-tg-file').addEventListener('click', loadFileFromTelegram);
+    container.querySelector('#btn-edit-tg-creds').addEventListener('click', showTelegramConfigOverlay);
     return;
   }
 
@@ -923,19 +975,28 @@ function renderDashboardScreen(container) {
       <div style="display:flex; flex-direction:column; gap:24px">
         <!-- Dashboard Summary Header -->
         <div class="card-filled" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px">
-          <div>
-            <div class="label-small" style="font-weight:700; color:var(--md-on-surface-variant)">REPORTING PERIOD</div>
-            <div class="headline-small" style="font-weight:800; color:var(--md-primary)">
-              ${metrics.currMONName} (26 ${metrics.prevMONShort} – 25 ${metrics.currMONShort})
+          <div class="flex items-center gap-12 flex-wrap" style="flex:1.5; min-width:280px">
+            <div class="form-group" style="margin-bottom:0">
+              <label class="label-small" style="font-weight:700; color:var(--md-on-surface-variant)">MONTH</label>
+              <select id="dash-month" style="height:36px; padding:0 8px; font-weight:700; color:var(--md-primary); border:1px solid var(--md-outline); border-radius:var(--radius-sm); background:var(--md-surface)">
+                ${months.map((m, idx) => `<option value="${idx}" ${idx === window.qsiSession.selectedMonth ? 'selected' : ''}>${m}</option>`).join('')}
+              </select>
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label class="label-small" style="font-weight:700; color:var(--md-on-surface-variant)">YEAR</label>
+              <select id="dash-year" style="height:36px; padding:0 8px; font-weight:700; color:var(--md-primary); border:1px solid var(--md-outline); border-radius:var(--radius-sm); background:var(--md-surface)">
+                ${years.map(y => `<option value="${y}" ${y === window.qsiSession.selectedYear ? 'selected' : ''}>${y}</option>`).join('')}
+              </select>
             </div>
           </div>
-          <div style="text-align:center">
+          
+          <div style="text-align:center; flex:1">
             <div class="label-small" style="font-weight:700; color:var(--md-on-surface-variant)">QSI INPUT SCORE</div>
             <div class="display-medium" style="font-weight:900; color:var(--md-primary)">
               ${qsiInputScore.toFixed(2)} <span class="title-medium" style="color:var(--md-on-surface-variant)">/ 5</span>
             </div>
           </div>
-          <div style="text-align:right">
+          <div style="text-align:right; flex:1.2; min-width:180px">
             <div class="label-small" style="font-weight:700; color:var(--md-on-surface-variant)">ACTIVE REPORT</div>
             <div class="body-medium" style="font-weight:700; color:var(--md-on-surface); font-family:monospace">
               ${window.qsiSession.fileName}
@@ -1269,6 +1330,24 @@ function renderDashboardScreen(container) {
       window.qsiSession.fncp = val;
       localStorage.setItem('qsi_fncp', val);
       renderDashboardScreen(container);
+    });
+  }
+
+  // Bind dashboard dropdown selectors
+  const dashMonth = container.querySelector('#dash-month');
+  const dashYear = container.querySelector('#dash-year');
+  if (dashMonth) {
+    dashMonth.addEventListener('change', e => {
+      window.qsiSession.selectedMonth = parseInt(e.target.value, 10);
+      renderDashboardScreen(container);
+      triggerPMQHourRefresh();
+    });
+  }
+  if (dashYear) {
+    dashYear.addEventListener('change', e => {
+      window.qsiSession.selectedYear = parseInt(e.target.value, 10);
+      renderDashboardScreen(container);
+      triggerPMQHourRefresh();
     });
   }
 
@@ -1874,16 +1953,14 @@ function showTelegramConfigOverlay() {
       return;
     }
 
-    // Save locally
+    // Save locally only
     window.qsiSession.tgBotToken = token;
     window.qsiSession.tgChatId = chat;
     localStorage.setItem('qsi_tg_bot_token', token);
     localStorage.setItem('qsi_tg_chat_id', chat);
 
     closeOverlay();
-    
-    // Automatically trigger fetch
-    loadFileFromTelegram();
+    showSnackbar('Telegram credentials saved locally.');
   };
 }
 
@@ -1916,6 +1993,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (configBtn) {
     configBtn.onclick = showConfigDialog;
+  }
+
+  // Check if Telegram credentials are not yet configured on startup
+  if (!window.qsiSession.tgBotToken || !window.qsiSession.tgChatId) {
+    showTelegramConfigOverlay();
   }
 
   // Hide initial loading screen
