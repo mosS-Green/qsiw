@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Phase 3 Construction Activity & QSI Tracker">
+  <meta name="theme-color" content="#3a6b3e">
+  <title>Phase 3 QSI Tracker</title>
+  
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+  <link rel="apple-touch-icon" href="icons/icon.svg">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+  
+  <link rel="stylesheet" href="index.css">
+</head>
+<body>
+
+  <!-- PWA Initial Loading Screen -->
+  <div id="initial-loading" class="initial-loading">
+    <div class="brand flex-col items-center">
+      <span class="material-icons-round" style="font-size:64px; color:var(--md-primary)">apartment</span>
+      <div class="brand-name headline-medium" style="font-weight:800; color:var(--md-primary)">Phase 3 QSI Tracker</div>
+      <div class="brand-sub body-medium" style="color:var(--md-on-surface-variant)">Loading dashboard...</div>
+    </div>
+    <div class="progress-track">
+      <div class="progress-fill"></div>
+    </div>
+  </div>
+
+  <!-- Primary Application Wrapper -->
+  <div id="app">
+    <!-- Offline alert banner -->
+    <div id="offline-banner" class="offline-banner hidden" style="background:var(--md-error-container); color:var(--md-on-error-container); padding:8px 16px; font-weight:600; display:flex; align-items:center; gap:8px; font-size:0.9rem">
+      <span class="material-icons-round">cloud_off</span>
+      <span>You are currently offline. Using cached data.</span>
+    </div>
+
+    <!-- Toast Snackbar notification -->
+    <div id="snackbar" class="snackbar hidden">
+      <span id="snackbar-text">Loading...</span>
+    </div>
+
+    <!-- Navigation Top Bar -->
+    <div class="top-bar">
+      <div class="flex items-center gap-24" style="flex:1">
+        <div class="title" id="app-title" style="cursor:pointer" onclick="window.location.hash = '#/qsi-dashboard'">Phase 3</div>
+        <div class="tab-row">
+          <button class="tab" id="tab-activities" onclick="window.location.hash = '#/activities'" style="display:none">
+            <span class="material-icons-round">view_list</span>
+            <span>Activities</span>
+          </button>
+          <button class="tab active" id="tab-qsi">
+            <span class="material-icons-round">analytics</span>
+            <span>QSi Dashboard</span>
+          </button>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn btn-outlined" id="btn-config-dialog">
+          <span class="material-icons-round">settings</span>
+          <span>Reporting Config</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Active view container -->
+    <div id="screen-container"></div>
+  </div>
+
+  <!-- Telegram Credentials Modal Overlay -->
+  <div id="tg-config-overlay" class="dialog-overlay hidden">
+    <div class="dialog">
+      <div class="dialog-title">
+        <span>Telegram API Credentials</span>
+        <button class="icon-btn" id="btn-tg-close">
+          <span class="material-icons-round">close</span>
+        </button>
+      </div>
+      <div class="dialog-content">
+        <p class="body-medium" style="color:var(--md-on-surface-variant)">Enter your Telegram Bot details. These credentials will be stored locally in your browser storage.</p>
+        <div class="form-group">
+          <label for="tg-bot-token">Bot Token (ID)</label>
+          <input type="text" id="tg-bot-token" placeholder="123456789:ABCdefGhIJKlmNoPQRsT...">
+        </div>
+        <div class="form-group">
+          <label for="tg-chat-id">Chat / Channel ID</label>
+          <input type="text" id="tg-chat-id" placeholder="-100123456789 or @channelname">
+        </div>
+        <div id="tg-config-error" class="label-medium hidden" style="color:var(--md-error)"></div>
+      </div>
+      <div class="dialog-actions">
+        <button class="btn btn-text" id="btn-tg-cancel">Cancel</button>
+        <button class="btn btn-filled" id="btn-tg-save">
+          <span class="material-icons-round">save</span>
+          <span>Save & Load</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SheetJS & html2canvas CDNs -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
+  <!-- Core App Logic -->
+  <script src="app.js"></script>
+</body>
+</html>

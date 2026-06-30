@@ -1,0 +1,24 @@
+{
+  "name": "Phase 3 QSI Dashboard",
+  "short_name": "QSI Dashboard",
+  "description": "Quality Status Indicators (QSI) analysis and tracking system.",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#fafdf6",
+  "theme_color": "#3a6b3e",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}
